@@ -1,5 +1,5 @@
 <script>
-  import { price, scoreClass } from "../format.js";
+  import { price, finnUrl, scoreClass } from "../format.js";
 
   let { listing, onopen } = $props();
 
@@ -50,9 +50,33 @@
       {/if}
     </div>
   </button>
+  <a class="finn" href={finnUrl(listing)} target="_blank" rel="noreferrer" title="Open the ad on finn.no">finn.no ↗</a>
 </article>
 
 <style>
+  article {
+    position: relative;
+  }
+
+  .finn {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--blue);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+
+  .finn:hover {
+    background: var(--blue);
+    color: #fff;
+    text-decoration: none;
+  }
+
   .open {
     all: unset;
     display: block;
@@ -130,7 +154,7 @@
 
   .sold {
     position: absolute;
-    top: 8px;
+    bottom: 8px;
     left: 8px;
     background: var(--red);
     color: #fff;
