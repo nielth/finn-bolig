@@ -43,7 +43,7 @@ http://localhost:8080/finn-bolig.user.js).
 | Variable | Default | |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | | Required |
-| `CLAUDE_MODEL` | `claude-opus-5-5` | |
+| `CLAUDE_MODEL` | `claude-opus-5-5` | Default model; can be changed on the "What I want" page |
 | `CLAUDE_EFFORT` | `medium` | `low`, `medium`, `high` |
 | `SCORING_CONCURRENCY` | `4` | Parallel Claude requests |
 | `SCORING_MAX_IMAGES` | `10` | Photos per home |

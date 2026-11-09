@@ -19,6 +19,7 @@ export const api = {
   removeReference: (id) => request("DELETE", `/references/${id}`),
   settings: () => request("GET", "/settings"),
   saveSettings: (settings) => request("PUT", "/settings", settings),
+  models: () => request("GET", "/models"),
   scoring: () => request("GET", "/scoring"),
   runScoring: () => request("POST", "/scoring/run"),
   pauseScoring: () => request("POST", "/scoring/pause"),

@@ -20,18 +20,28 @@
 
   let prompt = $state("");
   let autoRescore = $state(true);
+  let model = $state("");
+  let models = $state([]);
   let saved = $state(null);
   let busy = $state(false);
   let error = $state("");
   let message = $state("");
 
-  const dirty = $derived(saved && (prompt !== saved.prompt || autoRescore !== saved.auto_rescore));
+  const dirty = $derived(
+    saved && (prompt !== saved.prompt || autoRescore !== saved.auto_rescore || model !== currentModel(saved)),
+  );
+  const modelNote = $derived(models.find((m) => m.id === model)?.note || "");
+
+  // An empty model in the settings means the default model.
+  function currentModel(settings) {
+    return settings.model || models.find((m) => m.default)?.id || "";
+  }
 
   async function save() {
     busy = true;
     error = "";
     try {
-      saved = await api.saveSettings({ prompt, auto_rescore: autoRescore });
+      saved = await api.saveSettings({ prompt, auto_rescore: autoRescore, model });
       message = autoRescore
         ? "Saved. Claude will rescore all homes in a few seconds, and the list updates as scores come in."
         : "Saved. Automatic rescoring is off, so press Rescore now to update the scores.";
@@ -51,7 +61,8 @@
 
   onMount(async () => {
     try {
-      saved = await api.settings();
+      [saved, models] = await Promise.all([api.settings(), api.models()]);
+      model = currentModel(saved);
       prompt = saved.prompt;
       autoRescore = saved.auto_rescore;
     } catch (e) {
@@ -75,6 +86,16 @@
 </div>
 
 <textarea rows="10" bind:value={prompt}></textarea>
+
+<label class="model">
+  <span>Model</span>
+  <select bind:value={model}>
+    {#each models as m}
+      <option value={m.id}>{m.label}</option>
+    {/each}
+  </select>
+  <span class="muted">{modelNote}</span>
+</label>
 
 <label class="auto">
   <input type="checkbox" bind:checked={autoRescore} />
@@ -127,6 +148,14 @@
     display: block;
     line-height: 1.5;
     resize: vertical;
+  }
+
+  .model {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+    margin-top: 14px;
   }
 
   .auto {

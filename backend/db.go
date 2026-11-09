@@ -77,10 +77,15 @@ func openDB(path string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Added after the first release, so older databases need the column.
-	_, err = db.Exec(`ALTER TABLE settings ADD COLUMN paused INTEGER NOT NULL DEFAULT 0`)
-	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
-		return nil, err
+	// Columns added after the first release, so older databases need them.
+	for _, col := range []string{
+		"paused INTEGER NOT NULL DEFAULT 0",
+		"model TEXT NOT NULL DEFAULT ''",
+	} {
+		_, err = db.Exec("ALTER TABLE settings ADD COLUMN " + col)
+		if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+			return nil, err
+		}
 	}
 	return &DB{db}, nil
 }
@@ -334,18 +339,21 @@ type Settings struct {
 	Prompt      string `json:"prompt"`
 	Version     int64  `json:"version"`
 	AutoRescore bool   `json:"auto_rescore"`
+	Model       string `json:"model"` // "" means the default model from the environment
 }
 
 func (db *DB) settings() (Settings, error) {
 	var s Settings
 	var auto int
-	err := db.QueryRow("SELECT prompt, version, auto_rescore FROM settings WHERE id = 1").Scan(&s.Prompt, &s.Version, &auto)
+	err := db.QueryRow("SELECT prompt, version, auto_rescore, model FROM settings WHERE id = 1").
+		Scan(&s.Prompt, &s.Version, &auto, &s.Model)
 	s.AutoRescore = auto == 1
 	return s, err
 }
 
-func (db *DB) saveSettings(prompt string, autoRescore bool) error {
-	_, err := db.Exec("UPDATE settings SET prompt = ?, auto_rescore = ?, version = version + 1 WHERE id = 1", prompt, boolInt(autoRescore))
+func (db *DB) saveSettings(s Settings) error {
+	_, err := db.Exec("UPDATE settings SET prompt = ?, auto_rescore = ?, model = ?, version = version + 1 WHERE id = 1",
+		s.Prompt, boolInt(s.AutoRescore), s.Model)
 	return err
 }
 

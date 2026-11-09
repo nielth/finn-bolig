@@ -79,6 +79,7 @@ func main() {
 	mux.HandleFunc("DELETE /api/references/{finnkode}", s.handleRemoveReference)
 	mux.HandleFunc("GET /api/settings", s.handleSettings)
 	mux.HandleFunc("PUT /api/settings", s.handleSaveSettings)
+	mux.HandleFunc("GET /api/models", s.handleModels)
 	mux.HandleFunc("GET /api/scoring", s.handleScoring)
 	mux.HandleFunc("POST /api/scoring/run", s.handleRunScoring)
 	mux.HandleFunc("POST /api/scoring/pause", s.handlePauseScoring)
@@ -273,13 +274,26 @@ func (s *Server) handleSaveSettings(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]string{"error": "prompt can not be empty"})
 		return
 	}
-	if err := s.db.saveSettings(body.Prompt, body.AutoRescore); err != nil {
+	if body.Model != "" && !validModel(body.Model) {
+		writeJSON(w, 400, map[string]string{"error": "unknown model " + body.Model})
+		return
+	}
+	if err := s.db.saveSettings(body); err != nil {
 		writeErr(w, 500, err)
 		return
 	}
 	s.autoTrigger()
 	settings, _ := s.db.settings()
 	writeJSON(w, 200, settings)
+}
+
+func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
+	out := []ModelOption{}
+	for _, m := range models {
+		m.Default = m.ID == s.scorer.model
+		out = append(out, m)
+	}
+	writeJSON(w, 200, out)
 }
 
 func (s *Server) handleScoring(w http.ResponseWriter, r *http.Request) {

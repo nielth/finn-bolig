@@ -209,7 +209,7 @@ func (s *Scorer) run(ctx context.Context, settings Settings) error {
 		go func() {
 			defer wg.Done()
 			for l := range jobs {
-				s.scoreOne(ctx, settings.Version, prefix, l)
+				s.scoreOne(ctx, settings.Version, s.modelFor(settings), prefix, l)
 			}
 		}()
 	}
@@ -276,7 +276,47 @@ func (s *Scorer) imageBlock(ctx context.Context, url string) (anthropic.BetaCont
 	}), nil
 }
 
-func (s *Scorer) scoreOne(ctx context.Context, version int64, prefix []anthropic.BetaContentBlockParamUnion, l Listing) {
+type ModelOption struct {
+	ID      string `json:"id"`
+	Label   string `json:"label"`
+	Note    string `json:"note"`
+	Default bool   `json:"default"`
+}
+
+// models the user can pick from. Costs are rough per-home estimates with 10 photos.
+var models = []ModelOption{
+	{ID: "claude-opus-5-5", Label: "Claude Opus 5.5", Note: "Strong visual judgment, about $0.06 per home"},
+	{ID: "claude-sonnet-5-5", Label: "Claude Sonnet 5.5", Note: "Good balance, about $0.03 per home"},
+	{ID: "claude-haiku-5-5", Label: "Claude Haiku 5.5", Note: "Fast and very cheap, about $0.002 per home"},
+	{ID: "claude-fable-5-1", Label: "Claude Fable 5.1", Note: "Most capable, about $0.15 per home"},
+}
+
+func validModel(id string) bool {
+	for _, m := range models {
+		if m.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Scorer) modelFor(settings Settings) string {
+	if settings.Model != "" {
+		return settings.Model
+	}
+	return s.model
+}
+
+// Server-side refusal fallbacks are only offered for some models.
+func supportsFallbacks(model string) bool {
+	switch model {
+	case "claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1":
+		return true
+	}
+	return false
+}
+
+func (s *Scorer) scoreOne(ctx context.Context, version int64, model string, prefix []anthropic.BetaContentBlockParamUnion, l Listing) {
 	if ctx.Err() != nil {
 		return
 	}
@@ -299,8 +339,8 @@ func (s *Scorer) scoreOne(ctx context.Context, version int64, prefix []anthropic
 	}
 	content = append(content, anthropic.NewBetaTextBlock("Score how well the candidate home matches my taste."))
 
-	resp, err := s.client.Beta.Messages.New(ctx, anthropic.BetaMessageNewParams{
-		Model:     anthropic.Model(s.model),
+	params := anthropic.BetaMessageNewParams{
+		Model:     anthropic.Model(model),
 		MaxTokens: 16000,
 		System:    []anthropic.BetaTextBlockParam{{Text: systemPrompt}},
 		Messages:  []anthropic.BetaMessageParam{anthropic.NewBetaUserMessage(content...)},
@@ -308,10 +348,13 @@ func (s *Scorer) scoreOne(ctx context.Context, version int64, prefix []anthropic
 			Effort: s.effort,
 			Format: anthropic.BetaJSONOutputFormatParam{Schema: scoreSchema},
 		},
+	}
+	if supportsFallbacks(model) {
 		// If a request is declined by a safety classifier, let the API retry it on a fallback model.
-		Fallbacks: anthropic.BetaFallbacksParamUnion{OfDefault: constant.ValueOf[constant.Default]()},
-		Betas:     []anthropic.AnthropicBeta{anthropic.AnthropicBetaServerSideFallback2026_07_01},
-	})
+		params.Fallbacks = anthropic.BetaFallbacksParamUnion{OfDefault: constant.ValueOf[constant.Default]()}
+		params.Betas = []anthropic.AnthropicBeta{anthropic.AnthropicBetaServerSideFallback2026_07_01}
+	}
+	resp, err := s.client.Beta.Messages.New(ctx, params)
 	if err != nil {
 		if ctx.Err() != nil {
 			return
