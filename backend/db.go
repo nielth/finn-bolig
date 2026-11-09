@@ -77,6 +77,11 @@ func openDB(path string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Added after the first release, so older databases need the column.
+	_, err = db.Exec(`ALTER TABLE settings ADD COLUMN paused INTEGER NOT NULL DEFAULT 0`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+		return nil, err
+	}
 	return &DB{db}, nil
 }
 
@@ -344,6 +349,17 @@ func (db *DB) saveSettings(prompt string, autoRescore bool) error {
 	return err
 }
 
+func (db *DB) paused() bool {
+	var p int
+	_ = db.QueryRow("SELECT paused FROM settings WHERE id = 1").Scan(&p)
+	return p == 1
+}
+
+func (db *DB) setPaused(paused bool) error {
+	_, err := db.Exec("UPDATE settings SET paused = ? WHERE id = 1", boolInt(paused))
+	return err
+}
+
 // bumpVersion invalidates all scores, e.g. when references change.
 func (db *DB) bumpVersion() error {
 	_, err := db.Exec("UPDATE settings SET version = version + 1 WHERE id = 1")
@@ -361,6 +377,11 @@ func (db *DB) unscored(version int64) ([]Listing, error) {
 func (db *DB) saveScore(finnkode, version int64, score *int64, style, summary, errMsg *string) error {
 	_, err := db.Exec(`INSERT OR REPLACE INTO scores (finnkode, version, score, style, summary, error, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`, finnkode, version, score, style, summary, errMsg, now())
+	return err
+}
+
+func (db *DB) deleteScores(finnkode int64) error {
+	_, err := db.Exec("DELETE FROM scores WHERE finnkode = ?", finnkode)
 	return err
 }
 

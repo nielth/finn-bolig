@@ -54,6 +54,7 @@ type ScoringStatus struct {
 	Scored  int    `json:"scored"`
 	Total   int    `json:"total"`
 	Pending bool   `json:"pending"` // a run is scheduled (debounced)
+	Paused  bool   `json:"paused"`
 	Error   string `json:"error,omitempty"`
 }
 
@@ -88,7 +89,40 @@ func (s *Scorer) Trigger() {
 	s.timer = time.AfterFunc(s.debounce, s.start)
 }
 
+// Pause stops the running job (in-flight requests are cancelled) and blocks new runs until Resume.
+func (s *Scorer) Pause() error {
+	if err := s.db.setPaused(true); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.timer != nil {
+		s.timer.Stop()
+		s.timer = nil
+	}
+	if s.running {
+		s.cancel()
+		s.running = false
+		s.version = 0
+	}
+	return nil
+}
+
+func (s *Scorer) Resume() error {
+	if err := s.db.setPaused(false); err != nil {
+		return err
+	}
+	s.Trigger()
+	return nil
+}
+
 func (s *Scorer) start() {
+	if s.db.paused() {
+		s.mu.Lock()
+		s.timer = nil
+		s.mu.Unlock()
+		return
+	}
 	settings, err := s.db.settings()
 	if err != nil {
 		log.Printf("scorer: read settings: %v", err)
@@ -149,6 +183,7 @@ func (s *Scorer) Status() ScoringStatus {
 		Scored:  scored,
 		Total:   total,
 		Pending: s.timer != nil,
+		Paused:  s.db.paused(),
 		Error:   s.lastErr,
 	}
 }

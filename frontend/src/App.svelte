@@ -4,7 +4,7 @@
   import References from "./pages/References.svelte";
   import Preferences from "./pages/Preferences.svelte";
   import Sync from "./pages/Sync.svelte";
-  import { scoring, pollScoring } from "./scoring.svelte.js";
+  import { scoring, pollScoring, togglePause } from "./scoring.svelte.js";
 
   const routes = { "/": Listings, "/references": References, "/preferences": Preferences, "/sync": Sync };
 
@@ -29,13 +29,18 @@
       <a href="#/sync" class:active={path === "/sync"}>Sync</a>
     </nav>
     <div class="status">
-      {#if scoring.running}
+      {#if scoring.paused}
+        Scoring paused ({scoring.scored}/{scoring.total} scored)
+      {:else if scoring.running}
         <span class="dot"></span> Claude is scoring {scoring.scored}/{scoring.total}
       {:else if scoring.pending}
         <span class="dot"></span> Scoring starts soon…
       {:else if scoring.total > 0}
         {scoring.scored}/{scoring.total} scored
       {/if}
+      <button class="pause" onclick={togglePause} title={scoring.paused ? "Resume Claude scoring" : "Pause Claude scoring"}>
+        {scoring.paused ? "▶ Resume" : "❚❚ Pause"}
+      </button>
     </div>
   </div>
 </header>
@@ -103,6 +108,11 @@
     display: flex;
     align-items: center;
     gap: 6px;
+  }
+
+  .pause {
+    padding: 4px 10px;
+    font-size: 13px;
   }
 
   .dot {

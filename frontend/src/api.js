@@ -21,4 +21,6 @@ export const api = {
   saveSettings: (settings) => request("PUT", "/settings", settings),
   scoring: () => request("GET", "/scoring"),
   runScoring: () => request("POST", "/scoring/run"),
+  pauseScoring: () => request("POST", "/scoring/pause"),
+  resumeScoring: () => request("POST", "/scoring/resume"),
 };

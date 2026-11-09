@@ -1,8 +1,10 @@
 // ==UserScript==
 // @name         boligjakt sync
 // @namespace    https://github.com/nielth/finn-bolig
-// @version      0.1.0
+// @version      0.1.1
 // @description  Send homes from finn.no to your local boligjakt app, at a slow and polite pace.
+// @updateURL    http://localhost:8080/finn-bolig.user.js
+// @downloadURL  http://localhost:8080/finn-bolig.user.js
 // @match        https://www.finn.no/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
@@ -289,11 +291,16 @@
   function extractImages(html, finnkode) {
     const clean = html.replace(/\\u002F/gi, "/").replace(/\\\//g, "/");
     const re = /https:\/\/images\.finncdn\.no\/dynamic\/[^/"'\s\\]+\/([^"'\s\\),]+)/g;
+    // Image paths contain the finnkode either whole (item/479861168/...) or split in groups of three
+    // (.../479/861/168_<uuid>.jpg).
+    const id = String(finnkode);
+    const grouped = id.replace(/(\d{3})(?=\d)/g, "$1/");
+    const belongsToAd = (rest) => rest.includes(`/${id}/`) || rest.includes(`${grouped}_`) || rest.includes(`/${id}_`);
     const seen = new Set();
     const out = [];
     for (const m of clean.matchAll(re)) {
       const rest = m[1].replace(/&amp;/g, "&");
-      if (!rest.includes(String(finnkode)) || seen.has(rest)) continue;
+      if (!belongsToAd(rest) || seen.has(rest)) continue;
       seen.add(rest);
       out.push(`https://images.finncdn.no/dynamic/default/${rest}`);
     }

@@ -81,6 +81,8 @@ func main() {
 	mux.HandleFunc("PUT /api/settings", s.handleSaveSettings)
 	mux.HandleFunc("GET /api/scoring", s.handleScoring)
 	mux.HandleFunc("POST /api/scoring/run", s.handleRunScoring)
+	mux.HandleFunc("POST /api/scoring/pause", s.handlePauseScoring)
+	mux.HandleFunc("POST /api/scoring/resume", s.handleResumeScoring)
 	mux.HandleFunc("POST /api/ingest/search", s.handleIngestSearch)
 	mux.HandleFunc("POST /api/ingest/sold", s.handleIngestSold)
 	mux.HandleFunc("POST /api/ingest/ad", s.handleIngestAd)
@@ -289,6 +291,22 @@ func (s *Server) handleRunScoring(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, s.scorer.Status())
 }
 
+func (s *Server) handlePauseScoring(w http.ResponseWriter, r *http.Request) {
+	if err := s.scorer.Pause(); err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	writeJSON(w, 200, s.scorer.Status())
+}
+
+func (s *Server) handleResumeScoring(w http.ResponseWriter, r *http.Request) {
+	if err := s.scorer.Resume(); err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	writeJSON(w, 200, s.scorer.Status())
+}
+
 func (s *Server) handleIngestSearch(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Complete bool        `json:"complete"`
@@ -357,10 +375,17 @@ func (s *Server) handleIngestAd(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	// A reference that just got its images changes what Claude compares against.
-	if s.db.isReference(in.Finnkode) && len(in.Images) > 0 && (before == nil || len(before.Images) == 0) {
+	gotMoreImages := before == nil || len(in.Images) > len(before.Images)
+	if s.db.isReference(in.Finnkode) && gotMoreImages {
+		// A reference with new photos changes what Claude compares against.
 		s.referencesChanged()
 	} else {
+		if gotMoreImages {
+			// The old score was based on the few preview photos from the search results.
+			if err := s.db.deleteScores(in.Finnkode); err != nil {
+				log.Printf("delete scores: %v", err)
+			}
+		}
 		s.autoTrigger()
 	}
 	l, _ := s.db.getListing(in.Finnkode)

@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { api } from "../api.js";
-  import { scoring, pollScoring } from "../scoring.svelte.js";
+  import { scoring, pollScoring, togglePause } from "../scoring.svelte.js";
 
   const examples = [
     {
@@ -83,14 +83,17 @@
 
 <div class="actions">
   <button class="primary" onclick={save} disabled={busy || !dirty}>Save and update list</button>
-  <button onclick={rescore}>Rescore now</button>
+  <button onclick={rescore} disabled={scoring.paused}>Rescore now</button>
+  <button onclick={togglePause}>{scoring.paused ? "▶ Resume scoring" : "❚❚ Pause scoring"}</button>
 </div>
 
 {#if error}<p class="error">{error}</p>{/if}
 {#if message}<p class="notice">{message}</p>{/if}
 
 <div class="status">
-  {#if scoring.running}
+  {#if scoring.paused}
+    Scoring is paused. {scoring.scored} of {scoring.total} homes are scored for the current description.
+  {:else if scoring.running}
     <div class="progress"><div style="width: {scoring.total ? (100 * scoring.scored) / scoring.total : 0}%"></div></div>
     Claude has scored {scoring.scored} of {scoring.total} homes.
   {:else if scoring.pending}
