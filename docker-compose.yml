@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-opus-5-5}
+    volumes:
+      - data:/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      # Only reachable from this machine. The userscript posts to /api through this port.
+      - "127.0.0.1:8080:80"
+    restart: unless-stopped
+
+volumes:
+  data:

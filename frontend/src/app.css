@@ -1,0 +1,157 @@
+:root {
+  --blue: #0063fb;
+  --blue-dark: #0049b8;
+  --blue-light: #e5efff;
+  --text: #1b1b1f;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --bg: #ffffff;
+  --bg-soft: #f6f8fb;
+  --green: #0d8a4f;
+  --yellow: #b7791f;
+  --red: #c53030;
+  --radius: 8px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  padding: 8px 14px;
+}
+
+button:hover {
+  background: var(--bg-soft);
+}
+
+button.primary {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+  font-weight: 600;
+}
+
+button.primary:hover {
+  background: var(--blue-dark);
+}
+
+button.danger {
+  color: var(--red);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: var(--text);
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  background: var(--bg);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--blue);
+  outline-offset: -1px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 14px;
+  background: var(--bg);
+}
+
+.chip.active {
+  background: var(--blue-light);
+  border-color: var(--blue);
+  color: var(--blue-dark);
+  font-weight: 600;
+}
+
+.score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  background: #94a3b8;
+}
+
+.score.high {
+  background: var(--green);
+}
+
+.score.mid {
+  background: var(--yellow);
+}
+
+.score.low {
+  background: #64748b;
+}
+
+.score.none {
+  background: #cbd5e1;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px 20px;
+}
+
+.error {
+  color: var(--red);
+}
