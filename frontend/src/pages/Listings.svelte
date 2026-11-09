@@ -1,16 +1,17 @@
 <script>
   import { onMount } from "svelte";
   import { api } from "../api.js";
-  import { scoring } from "../scoring.svelte.js";
   import ListingCard from "../components/ListingCard.svelte";
   import ListingDetail from "../components/ListingDetail.svelte";
 
   const STORAGE_KEY = "boligjakt-filters";
 
   function loadFilters() {
-    const defaults = { status: "active", districts: [], priceMin: "", priceMax: "", sort: "score" };
+    const defaults = { status: "active", districts: [], priceMin: "", priceMax: "", sort: "newest" };
     try {
-      return { ...defaults, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") };
+      const stored = { ...defaults, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") };
+      if (stored.sort === "score") stored.sort = defaults.sort; // AI ranking is not available yet
+      return stored;
     } catch {
       return defaults;
     }
@@ -49,16 +50,6 @@
     load();
   });
 
-  // Reload when Claude has scored more homes, so the order updates as scores arrive.
-  let lastScored = 0;
-  $effect(() => {
-    const key = scoring.scored * 1000003 + scoring.version;
-    if (key !== lastScored) {
-      lastScored = key;
-      load();
-    }
-  });
-
   function toggleDistrict(name) {
     filters.districts = filters.districts.includes(name)
       ? filters.districts.filter((d) => d !== name)
@@ -92,7 +83,7 @@
     <label>
       <span class="muted">Sort</span>
       <select bind:value={filters.sort}>
-        <option value="score">Best match</option>
+        <option value="area_desc">Largest</option>
         <option value="newest">Newest</option>
         <option value="price_asc">Lowest price</option>
         <option value="price_desc">Highest price</option>
@@ -114,9 +105,6 @@
 
 <div class="summary">
   <h2>{listings.length} {listings.length === 1 ? "home" : "homes"}</h2>
-  {#if filters.sort === "score"}
-    <span class="muted">sorted by how well Claude thinks they match what you want</span>
-  {/if}
 </div>
 
 {#if error}
@@ -126,7 +114,7 @@
 {:else if listings.length === 0}
   <div class="empty">
     <p>No homes here yet.</p>
-    <p class="muted">Use the userscript on finn.no to sync a search. See <a href="#/sync">Sync</a>.</p>
+    <p class="muted">Install the crawler userscript and open finn.no. See <a href="#/sync">Sync</a>.</p>
   </div>
 {:else}
   <div class="grid">

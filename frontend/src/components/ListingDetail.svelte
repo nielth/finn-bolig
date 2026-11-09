@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { api } from "../api.js";
-  import { price, finnUrl, scoreClass } from "../format.js";
+  import { price, finnUrl, scoreClass, date, dateTime, eventLabel } from "../format.js";
 
   let { finnkode, onclose, onchange = () => {} } = $props();
 
@@ -100,25 +100,43 @@
           <div class="sold">Sold</div>
         {/if}
 
-        <div class="claude">
-          <span class="score {scoreClass(listing.score)}">{listing.score ?? "–"}</span>
-          <div>
-            {#if listing.style}<div class="style">{listing.style}</div>{/if}
-            <div class="muted">
-              {listing.summary || listing.score_error || "Claude has not scored this home yet."}
+        {#if listing.score != null}
+          <div class="claude">
+            <span class="score {scoreClass(listing.score)}">{listing.score}</span>
+            <div>
+              {#if listing.style}<div class="style">{listing.style}</div>{/if}
+              <div class="muted">{listing.summary || ""}</div>
             </div>
           </div>
-        </div>
+        {/if}
 
         <dl>
           {#if listing.price}<dt>Asking price</dt><dd class="big">{price(listing.price)}</dd>{/if}
           {#if listing.price_total}<dt>Total price</dt><dd>{price(listing.price_total)}</dd>{/if}
+          {#if listing.shared_costs}<dt>Shared costs</dt><dd>{price(listing.shared_costs)}/mo</dd>{/if}
           {#if listing.area}<dt>Size</dt><dd>{listing.area} m²</dd>{/if}
+          {#if listing.plot_area}<dt>Plot</dt><dd>{listing.plot_area} m²</dd>{/if}
           {#if listing.bedrooms}<dt>Bedrooms</dt><dd>{listing.bedrooms}</dd>{/if}
+          {#if listing.rooms}<dt>Rooms</dt><dd>{listing.rooms}</dd>{/if}
+          {#if listing.build_year}<dt>Built</dt><dd>{listing.build_year}</dd>{/if}
           {#if listing.property_type}<dt>Type</dt><dd>{listing.property_type}</dd>{/if}
+          {#if listing.ownership_type}<dt>Ownership</dt><dd>{listing.ownership_type}</dd>{/if}
+          {#if listing.energy_label}<dt>Energy label</dt><dd>{listing.energy_label}</dd>{/if}
           {#if listing.district}<dt>District</dt><dd>{listing.district}</dd>{/if}
+          {#if listing.published_at}<dt>Published</dt><dd>{date(listing.published_at)}</dd>{/if}
+          {#if listing.finn_updated_at}<dt>Updated on finn</dt><dd>{date(listing.finn_updated_at)}</dd>{/if}
+          <dt>First seen</dt><dd>{date(listing.first_seen_at)}</dd>
           <dt>Finnkode</dt><dd>{listing.finnkode}</dd>
         </dl>
+
+        {#if listing.agent_name || listing.agent_company}
+          <div class="agent">
+            <div class="muted">Estate agent</div>
+            <div><b>{listing.agent_name || ""}</b></div>
+            <div>{listing.agent_company || ""}</div>
+            {#if listing.agent_phone}<div><a href="tel:{listing.agent_phone}">{listing.agent_phone}</a></div>{/if}
+          </div>
+        {/if}
 
         <button class={listing.is_reference ? "danger" : "primary"} onclick={toggleReference} disabled={busy}>
           {listing.is_reference ? "Remove from favourites" : "★ Add to favourites"}
@@ -129,6 +147,24 @@
           <button class="link" onclick={() => (showFullDescription = !showFullDescription)}>
             {showFullDescription ? "Show less" : "Show more"}
           </button>
+        {/if}
+
+        {#if listing.facts?.length}
+          <h2>Facts from the ad</h2>
+          <dl class="facts">
+            {#each listing.facts as fact}
+              <dt>{fact.label}</dt><dd>{fact.value}</dd>
+            {/each}
+          </dl>
+        {/if}
+
+        {#if listing.events?.length}
+          <h2>History</h2>
+          <ul class="events">
+            {#each listing.events as e}
+              <li><span class="muted">{dateTime(e.at)}</span> {eventLabel(e)}{e.detail ? `: ${e.detail}` : ""}</li>
+            {/each}
+          </ul>
         {/if}
       </section>
     </div>
@@ -309,6 +345,30 @@
 
   dd.big {
     font-size: 20px;
+  }
+
+  .agent {
+    margin: 0 0 20px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: 17px;
+    margin: 28px 0 10px;
+  }
+
+  .facts dd {
+    font-weight: 500;
+  }
+
+  .events {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    line-height: 1.8;
   }
 
   .description {

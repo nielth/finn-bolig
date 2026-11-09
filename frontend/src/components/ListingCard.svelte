@@ -1,10 +1,12 @@
 <script>
-  import { price, finnUrl, scoreClass } from "../format.js";
+  import { price, finnUrl, scoreClass, daysAgo, eventLabel } from "../format.js";
 
   let { listing, onopen } = $props();
 
   let index = $state(0);
   const images = $derived(listing.images || []);
+  // Show recent changes, like a new listing or a price drop, as a badge.
+  const recent = $derived(listing.last_event && daysAgo(listing.last_event.at) < 7 ? listing.last_event : null);
 
   function step(e, delta) {
     e.stopPropagation();
@@ -27,10 +29,12 @@
       {/if}
       {#if listing.status === "sold"}
         <span class="sold">SOLD</span>
+      {:else if recent}
+        <span class="event">{eventLabel(recent)}</span>
       {/if}
-      <span class="score {scoreClass(listing.score)} badge" title={listing.summary || listing.score_error || "Not scored yet"}>
-        {listing.score ?? "–"}
-      </span>
+      {#if listing.score != null}
+        <span class="score {scoreClass(listing.score)} badge" title={listing.summary || ""}>{listing.score}</span>
+      {/if}
     </div>
     <div class="body">
       <div class="area muted">{listing.local_area || listing.district || ""}</div>
@@ -159,6 +163,18 @@
     background: var(--red);
     color: #fff;
     font-weight: 700;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  .event {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: var(--blue);
+    color: #fff;
+    font-weight: 600;
     font-size: 12px;
     padding: 4px 8px;
     border-radius: 4px;

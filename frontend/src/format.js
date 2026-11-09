@@ -14,3 +14,28 @@ export function scoreClass(score) {
   if (score >= 50) return "mid";
   return "low";
 }
+
+export function date(iso) {
+  return iso ? new Date(iso).toLocaleDateString("nb-NO", { day: "numeric", month: "short", year: "numeric" }) : "";
+}
+
+export function dateTime(iso) {
+  return iso ? new Date(iso).toLocaleString("nb-NO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+}
+
+export function daysAgo(iso) {
+  return iso ? (Date.now() - new Date(iso).getTime()) / 86400000 : Infinity;
+}
+
+const eventLabels = {
+  new: "New",
+  price_change: "Price changed",
+  updated: "Ad updated",
+  sold: "Sold",
+  removed: "Removed from finn",
+  relisted: "Back on finn",
+};
+
+export function eventLabel(e) {
+  return eventLabels[e.kind] || e.kind;
+}

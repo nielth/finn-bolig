@@ -4,7 +4,8 @@
   import References from "./pages/References.svelte";
   import Preferences from "./pages/Preferences.svelte";
   import Sync from "./pages/Sync.svelte";
-  import { scoring, pollScoring, togglePause } from "./scoring.svelte.js";
+  import { crawl, pollCrawl } from "./crawl.svelte.js";
+  import { dateTime } from "./format.js";
 
   const routes = { "/": Listings, "/references": References, "/preferences": Preferences, "/sync": Sync };
 
@@ -14,7 +15,7 @@
   onMount(() => {
     const onHash = () => (path = location.hash.slice(1) || "/");
     window.addEventListener("hashchange", onHash);
-    pollScoring();
+    pollCrawl();
     return () => window.removeEventListener("hashchange", onHash);
   });
 </script>
@@ -29,18 +30,13 @@
       <a href="#/sync" class:active={path === "/sync"}>Sync</a>
     </nav>
     <div class="status">
-      {#if scoring.paused}
-        Scoring paused ({scoring.scored}/{scoring.total} scored)
-      {:else if scoring.running}
-        <span class="dot"></span> Claude is scoring {scoring.scored}/{scoring.total}
-      {:else if scoring.pending}
-        <span class="dot"></span> Scoring starts soon…
-      {:else if scoring.total > 0}
-        {scoring.scored}/{scoring.total} scored
+      {#if crawl.running}
+        <span class="dot"></span> Crawling finn: {crawl.running.pages} search pages, {crawl.running.pages_fetched} ads
+      {:else if crawl.last}
+        Updated {dateTime(crawl.last.finished_at)}
+      {:else}
+        Not crawled yet
       {/if}
-      <button class="pause" onclick={togglePause} title={scoring.paused ? "Resume Claude scoring" : "Pause Claude scoring"}>
-        {scoring.paused ? "▶ Resume" : "❚❚ Pause"}
-      </button>
     </div>
   </div>
 </header>
@@ -108,11 +104,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-  }
-
-  .pause {
-    padding: 4px 10px;
-    font-size: 13px;
   }
 
   .dot {
